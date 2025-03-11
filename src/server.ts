@@ -288,6 +288,7 @@ interface AuthRequest {
   password: string;
 }
 
+
 // Auth routes
 app.post('/api/auth/signup', async (c) => {
   const { email, password }: AuthRequest = await c.req.json();
