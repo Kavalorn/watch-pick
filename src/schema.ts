@@ -4,6 +4,7 @@ import { pgTable, serial, integer, text, timestamp, real, uniqueIndex } from 'dr
 // Watchlist schema for PostgreSQL
 export const watchlist = pgTable('watchlist', {
   id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(), // Добавить поле userId
   movieId: integer('movie_id').notNull(),
   title: text('title').notNull(),
   posterPath: text('poster_path'),
@@ -14,10 +15,10 @@ export const watchlist = pgTable('watchlist', {
     .defaultNow()
 }, (table) => {
   return {
-    movieIdIdx: uniqueIndex('movie_id_idx').on(table.movieId),
+    movieIdIdx: uniqueIndex('movie_id_idx').on(table.movieId, table.userId), // Изменить индекс
   }
 });
 
-// Define types based on the schema
+// Обновить типы на основе схемы
 export type Watchlist = typeof watchlist.$inferSelect;
 export type NewWatchlistEntry = typeof watchlist.$inferInsert;
