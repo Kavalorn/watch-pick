@@ -10,6 +10,7 @@ import 'dotenv/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 
+
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_AUTH_URL as string;
 const supabaseKey = process.env.SUPABASE_ANON_KEY as string;
