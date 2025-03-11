@@ -10,10 +10,8 @@ const db = drizzle(sqlite);
 async function main() {
   console.log('Creating database tables if they do not exist...');
   
-  // Use the schema directly to create tables
-  // This is a simple approach for development
   try {
-    // Create watchlist table based on our schema definition
+    // Create watchlist table
     await sqlite.exec(`
       CREATE TABLE IF NOT EXISTS watchlist (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,9 +25,18 @@ async function main() {
       )
     `);
     
+    // Check if we need to add the vote_average column to existing table
+    const tableInfo = await sqlite.query("PRAGMA table_info(watchlist)").all();
+    const hasVoteAverage = tableInfo.some(column => (column as any).name === 'vote_average');
+    
+    if (!hasVoteAverage) {
+      console.log('Adding vote_average column to existing watchlist table');
+      await sqlite.exec(`ALTER TABLE watchlist ADD COLUMN vote_average REAL`);
+    }
+    
     console.log('Database setup complete!');
   } catch (error) {
-    console.error('Error creating tables:', error);
+    console.error('Error setting up database:', error);
     throw error;
   }
 }

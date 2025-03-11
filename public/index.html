@@ -15,18 +15,26 @@
         <div class="border-b border-gray-200">
             <nav class="flex space-x-8" aria-label="Tabs">
                 <button 
-                    @click="currentTab = 'search'" 
+                    @click="currentTab = 'search'; selectedActor = null" 
                     :class="{'border-blue-500 text-blue-600 py-4 px-1 border-b-2 font-medium text-sm': currentTab === 'search', 
                              'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 border-b-2 font-medium text-sm': currentTab !== 'search'}"
                 >
                     Search Movies
                 </button>
                 <button 
-                    @click="currentTab = 'watchlist'; loadWatchlist()" 
+                    @click="currentTab = 'watchlist'; loadWatchlist(); selectedActor = null" 
                     :class="{'border-blue-500 text-blue-600 py-4 px-1 border-b-2 font-medium text-sm': currentTab === 'watchlist', 
                              'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 border-b-2 font-medium text-sm': currentTab !== 'watchlist'}"
                 >
                     Watchlist <span class="bg-gray-100 text-gray-600 ml-1 py-0.5 px-2 rounded-full text-xs" x-text="watchlist.length"></span>
+                </button>
+                <button 
+                    x-show="selectedActor"
+                    @click="currentTab = 'actor'" 
+                    :class="{'border-blue-500 text-blue-600 py-4 px-1 border-b-2 font-medium text-sm': currentTab === 'actor', 
+                             'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 border-b-2 font-medium text-sm': currentTab !== 'actor'}"
+                >
+                    <span x-text="selectedActor ? selectedActor.name : 'Actor'"></span>
                 </button>
             </nav>
         </div>
@@ -63,7 +71,7 @@
                             <span x-text="movie.vote_average.toFixed(1)"></span>
                             <span class="text-yellow-400">★</span>
                         </div>
-                        <!-- Watchlist button -->
+                        <!-- Watchlist toggle button -->
                         <button 
                             @click.stop="toggleWatchlist(movie)"
                             class="absolute top-2 right-2 bg-white bg-opacity-80 rounded-full p-2 shadow hover:bg-opacity-100 transition-colors duration-200"
@@ -74,8 +82,29 @@
                             </svg>
                         </button>
                     </div>
-                    <!-- Rest of card content -->
-                    <!-- ... -->
+                    <div class="p-6">
+                        <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 cursor-pointer" x-text="movie.title" @click="openMovieDetails(movie)"></h5>
+                        <p class="text-sm text-gray-500 mb-2" x-text="movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'Unknown release date'"></p>
+                        <p class="mb-3 font-normal text-gray-700" x-text="movie.overview ? movie.overview.substring(0, 100) + '...' : 'No description'"></p>
+                        <div class="flex space-x-2">
+                            <button 
+                                @click="openMovieDetails(movie)"
+                                class="inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300"
+                            >
+                                View Details
+                                <svg class="rtl:rotate-180 w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
+                                </svg>
+                            </button>
+                            <button 
+                                @click="toggleWatchlist(movie)"
+                                class="inline-flex items-center px-3 py-2 text-sm font-medium text-center rounded-lg border focus:ring-4 focus:outline-none focus:ring-yellow-300"
+                                :class="isInWatchlist(movie.id) ? 'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200' : 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200'"
+                            >
+                                <span x-text="isInWatchlist(movie.id) ? 'Remove from Watchlist' : 'Add to Watchlist'"></span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </template>
         </div>
@@ -119,12 +148,19 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-show="watchlist.length > 0">
             <template x-for="movie in watchlist" :key="movie.id || movie.movie_id">
                 <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col md:flex-row">
-                    <img 
-                        x-bind:src="movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster'" 
-                        class="w-full md:w-1/3 h-48 md:h-auto object-cover cursor-pointer"
-                        x-bind:alt="movie.title"
-                        @click="openMovieDetails(formatMovieForDetails(movie))"
-                    />
+                    <div class="relative w-full md:w-1/3">
+                        <img 
+                            x-bind:src="movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster'" 
+                            class="w-full h-48 md:h-full object-cover cursor-pointer"
+                            x-bind:alt="movie.title"
+                            @click="openMovieDetails(formatMovieForDetails(movie))"
+                        />
+                        <!-- Rating badge -->
+                        <div class="absolute top-2 left-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded-lg text-sm font-bold" x-show="movie.vote_average">
+                            <span x-text="typeof movie.vote_average === 'number' ? movie.vote_average.toFixed(1) : movie.vote_average"></span>
+                            <span class="text-yellow-400">★</span>
+                        </div>
+                    </div>
                     <div class="p-4 flex-1 flex flex-col">
                         <h5 class="text-xl font-bold tracking-tight text-gray-900 mb-1 cursor-pointer" x-text="movie.title" @click="openMovieDetails(formatMovieForDetails(movie))"></h5>
                         <p class="text-sm text-gray-500 mb-2" x-text="movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'Unknown release date'"></p>
@@ -149,6 +185,91 @@
                     </div>
                 </div>
             </template>
+        </div>
+    </div>
+
+    <!-- Actor Tab Content -->
+    <div x-show="currentTab === 'actor'" class="max-w-6xl mx-auto">
+        <div x-show="!selectedActor" class="text-center p-8">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700 mx-auto"></div>
+            <p class="mt-4">Loading actor information...</p>
+        </div>
+
+        <div x-show="selectedActor" class="mb-8">
+            <!-- Actor header section -->
+            <div class="flex flex-col md:flex-row gap-8 bg-white p-6 rounded-lg shadow-md mb-8">
+                <div class="md:w-1/4">
+                    <img 
+                        x-bind:src="selectedActor.profile_path ? `https://image.tmdb.org/t/p/w300${selectedActor.profile_path}` : 'https://via.placeholder.com/300x450?text=No+Image'" 
+                        class="w-full rounded-lg shadow-md"
+                        x-bind:alt="selectedActor.name"
+                    />
+                </div>
+                <div class="md:w-3/4">
+                    <h1 class="text-3xl font-bold mb-4" x-text="selectedActor.name"></h1>
+                    
+                    <div class="flex flex-wrap gap-4 mb-4">
+                        <span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded" x-show="selectedActor.birthday">
+                            Born: <span x-text="new Date(selectedActor.birthday).toLocaleDateString()"></span>
+                        </span>
+                        <span class="bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded" x-show="selectedActor.place_of_birth" x-text="selectedActor.place_of_birth"></span>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h2 class="text-xl font-semibold mb-2">Biography</h2>
+                        <p class="text-gray-700" x-text="selectedActor.biography || 'No biography available'"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 class="text-2xl font-bold mb-4">Filmography</h2>
+            
+            <!-- Loading state for filmography -->
+            <div x-show="loadingActorMovies" class="text-center p-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mx-auto"></div>
+                <p class="mt-2">Loading filmography...</p>
+            </div>
+            
+            <!-- Empty filmography message -->
+            <div x-show="!loadingActorMovies && (!actorMovies || actorMovies.length === 0)" class="text-center p-8 bg-gray-50 rounded-lg">
+                <p class="text-gray-600">No movies found for this actor</p>
+            </div>
+            
+            <!-- Actor movies grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4" x-show="!loadingActorMovies && actorMovies && actorMovies.length > 0">
+                <template x-for="movie in actorMovies" :key="movie.id">
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                        <div class="relative">
+                            <img 
+                                x-bind:src="movie.poster_path ? `https://image.tmdb.org/t/p/w300${movie.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster'" 
+                                class="w-full h-64 object-cover cursor-pointer"
+                                x-bind:alt="movie.title"
+                                @click="openMovieDetails(movie)"
+                            />
+                            <!-- Rating badge -->
+                            <div class="absolute top-2 left-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded-lg text-sm font-bold" x-show="movie.vote_average">
+                                <span x-text="movie.vote_average.toFixed(1)"></span>
+                                <span class="text-yellow-400">★</span>
+                            </div>
+                            <!-- Watchlist toggle button -->
+                            <button 
+                                @click.stop="toggleWatchlist(movie)"
+                                class="absolute top-2 right-2 bg-white bg-opacity-80 rounded-full p-2 shadow hover:bg-opacity-100 transition-colors duration-200"
+                                :class="isInWatchlist(movie.id) ? 'text-yellow-500' : 'text-gray-500'"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-lg font-bold mb-1 cursor-pointer line-clamp-2" x-text="movie.title" @click="openMovieDetails(movie)"></h3>
+                            <p class="text-sm text-gray-500" x-text="movie.release_date ? new Date(movie.release_date).getFullYear() : 'Unknown'"></p>
+                            <p class="text-sm text-gray-600 mt-1" x-show="movie.character" x-text="`as ${movie.character}`"></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
         </div>
     </div>
 
@@ -237,7 +358,10 @@
                             <h2 class="text-xl font-semibold mb-2">Cast</h2>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <template x-for="actor in cast.slice(0, 8)" :key="actor.id">
-                                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                                    <div 
+                                        class="bg-white rounded-lg shadow overflow-hidden cursor-pointer hover:shadow-md transition-shadow duration-300"
+                                        @click="viewActorFilmography(actor)"
+                                    >
                                         <img 
                                             x-bind:src="actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'" 
                                             class="w-full h-40 object-cover"
@@ -271,6 +395,125 @@
         </div>
     </div>
 
+    <!-- Actor Filmography Modal -->
+<div 
+x-show="showActorModal" 
+class="fixed inset-0 z-50 overflow-y-auto"
+x-transition:enter="transition ease-out duration-300"
+x-transition:enter-start="opacity-0"
+x-transition:enter-end="opacity-100"
+x-transition:leave="transition ease-in duration-200"
+x-transition:leave-start="opacity-100"
+x-transition:leave-end="opacity-0"
+>
+<div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+    <div 
+        class="fixed inset-0 transition-opacity" 
+        aria-hidden="true"
+        @click="showActorModal = false; if (previousMovie) openMovieDetails(previousMovie)"
+    >
+        <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+    </div>
+
+    <!-- Modal panel -->
+    <div 
+        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full"
+        @click.stop
+    >
+        <!-- Loading state -->
+        <div x-show="actorLoading" class="p-6 text-center">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-gray-700"></div>
+            <p class="mt-2">Loading actor information...</p>
+        </div>
+
+        <!-- Actor details and filmography -->
+        <div x-show="!actorLoading && actorDetails" class="max-h-[90vh] overflow-y-auto">
+            <!-- Close button -->
+            <div class="absolute top-0 right-0 pt-4 pr-4 z-10">
+                <button 
+                    @click="showActorModal = false; if (previousMovie) openMovieDetails(previousMovie)"
+                    class="bg-white rounded-full p-2 shadow-md hover:bg-gray-100 focus:outline-none"
+                >
+                    <svg class="h-6 w-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Actor header -->
+            <div class="flex flex-col md:flex-row p-6 border-b">
+                <div class="md:w-1/4 flex-shrink-0">
+                    <img 
+                        x-bind:src="actorDetails.profile_path ? `https://image.tmdb.org/t/p/w300${actorDetails.profile_path}` : 'https://via.placeholder.com/300x450?text=No+Image'" 
+                        class="w-full rounded-lg shadow-md mb-4 md:mb-0"
+                        x-bind:alt="actorDetails.name"
+                    />
+                </div>
+                <div class="md:w-3/4 md:pl-6">
+                    <h2 class="text-3xl font-bold mb-2" x-text="actorDetails.name"></h2>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded" x-show="actorDetails.birthday">
+                            Born: <span x-text="new Date(actorDetails.birthday).toLocaleDateString()"></span>
+                        </span>
+                        <span class="bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded" x-show="actorDetails.place_of_birth" x-text="actorDetails.place_of_birth"></span>
+                    </div>
+                    <div x-show="actorDetails.biography">
+                        <h3 class="text-xl font-semibold mb-2">Biography</h3>
+                        <p class="text-gray-700" x-text="actorDetails.biography"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actor filmography -->
+            <div class="p-6">
+                <h3 class="text-2xl font-bold mb-4">Filmography</h3>
+                
+                <!-- No movies message -->
+                <div x-show="actorMovies.length === 0" class="text-center py-8 text-gray-500">
+                    No movies found for this actor.
+                </div>
+                
+                <!-- Movies grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <template x-for="movie in actorMovies" :key="movie.id">
+                        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                            <div class="relative">
+                                <img 
+                                    x-bind:src="movie.poster_path ? `https://image.tmdb.org/t/p/w300${movie.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster'" 
+                                    class="w-full h-64 object-cover cursor-pointer"
+                                    x-bind:alt="movie.title"
+                                    @click="showActorModal = false; openMovieDetails(movie)"
+                                />
+                                <!-- Rating badge -->
+                                <div class="absolute top-2 left-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded-lg text-sm font-bold" x-show="movie.vote_average">
+                                    <span x-text="movie.vote_average.toFixed(1)"></span>
+                                    <span class="text-yellow-400">★</span>
+                                </div>
+                                <!-- Watchlist toggle button -->
+                                <button 
+                                    @click.stop="toggleWatchlist(movie)"
+                                    class="absolute top-2 right-2 bg-white bg-opacity-80 rounded-full p-2 shadow hover:bg-opacity-100 transition-colors duration-200"
+                                    :class="isInWatchlist(movie.id) ? 'text-yellow-500' : 'text-gray-500'"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="p-3">
+                                <h4 class="font-bold text-sm line-clamp-2 cursor-pointer" x-text="movie.title" @click="showActorModal = false; openMovieDetails(movie)"></h4>
+                                <p class="text-xs text-gray-500" x-text="movie.release_date ? new Date(movie.release_date).getFullYear() : 'Unknown'"></p>
+                                <p class="text-xs text-gray-600 mt-1 italic" x-show="movie.character" x-text="`as ${movie.character}`"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
 <script>
 // Base API URL - change this to your Bun.js backend URL
 const API_BASE_URL = 'http://localhost:3000/api';
@@ -293,6 +536,12 @@ function alpineInit() {
         cast: [],
         images: [],
         loadingDetails: false,
+
+        actorDetails: null,
+        actorMovies: [],
+        actorLoading: false,
+        showActorModal: false,
+        previousMovie: null,
         
         // Format movie object from SQLite for details view
         formatMovieForDetails(movie) {
@@ -330,30 +579,28 @@ function alpineInit() {
 // Update the toggleWatchlist function to correctly handle the IDs
 async toggleWatchlist(movie) {
     try {
-        const movieId = movie.id || movie.movie_id || movie.movieId;
+        const movieId = movie.id || movie.movie_id;
         
         if (this.isInWatchlist(movieId)) {
             // Remove from watchlist
             await axios.delete(`${API_BASE_URL}/watchlist/${movieId}`);
-            // Update local state immediately for better UX
             this.watchlist = this.watchlist.filter(m => {
-                const watchlistId = m.movieId || m.movie_id || m.id;
-                return watchlistId != movieId;
+                const id = m.movie_id || m.id;
+                return id != movieId;
             });
         } else {
-            // Add to watchlist
+            // Add to watchlist with the IMDb rating
             const movieData = {
                 id: movieId,
                 title: movie.title,
-                poster_path: movie.poster_path || movie.posterPath,
-                release_date: movie.release_date || movie.releaseDate,
-                overview: movie.overview
+                poster_path: movie.poster_path,
+                release_date: movie.release_date,
+                overview: movie.overview,
+                vote_average: movie.vote_average // Store the IMDb rating
             };
             
             await axios.post(`${API_BASE_URL}/watchlist`, movieData);
-            
-            // Refresh watchlist to get the server-side data
-            await this.loadWatchlist();
+            await this.loadWatchlist(); // Refresh watchlist
         }
     } catch (error) {
         console.error('Error updating watchlist:', error);
@@ -381,6 +628,42 @@ async toggleWatchlist(movie) {
                 this.movies = [];
             }
         },
+
+   // Add to your Alpine.js component
+async viewActorFilmography(actor) {
+    // Store the current movie to return to it later
+    this.previousMovie = this.selectedMovie;
+    
+    // Close the movie details modal
+    this.closeMovieDetails();
+    
+    // Show loading state
+    this.actorLoading = true;
+    
+    try {
+        // Fetch actor details
+        const actorResponse = await axios.get(`${API_BASE_URL}/person/${actor.id}`);
+        this.actorDetails = actorResponse.data;
+        
+        // Fetch actor filmography
+        const creditsResponse = await axios.get(`${API_BASE_URL}/person/${actor.id}/credits`);
+        
+        // Sort movies by popularity
+        let movies = creditsResponse.data.cast || [];
+        movies = movies.sort((a, b) => b.popularity - a.popularity);
+        
+        // Store the results
+        this.actorMovies = movies;
+        
+        // Show the actor modal
+        this.showActorModal = true;
+    } catch (error) {
+        console.error('Error fetching actor data:', error);
+        alert('Failed to load actor information');
+    } finally {
+        this.actorLoading = false;
+    }
+},
         
         // Open movie details modal using our backend proxy
         async openMovieDetails(movie) {

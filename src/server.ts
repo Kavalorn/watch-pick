@@ -200,6 +200,46 @@ app.delete('/api/watchlist/:id', async (c) => {
   }
 });
 
+// Get actor details
+app.get('/api/person/:id', async (c) => {
+  const id = c.req.param('id');
+  
+  try {
+    const response = await fetch(`https://api.themoviedb.org/3/person/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${TMDB_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    return c.json(data);
+  } catch (error) {
+    console.error('Error fetching actor details:', error);
+    return c.json({ error: 'Failed to fetch actor details' }, 500);
+  }
+});
+
+// Get actor filmography
+app.get('/api/person/:id/credits', async (c) => {
+  const id = c.req.param('id');
+  
+  try {
+    const response = await fetch(`https://api.themoviedb.org/3/person/${id}/movie_credits`, {
+      headers: {
+        'Authorization': `Bearer ${TMDB_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    return c.json(data);
+  } catch (error) {
+    console.error('Error fetching actor filmography:', error);
+    return c.json({ error: 'Failed to fetch actor filmography' }, 500);
+  }
+});
+
 // Start the server
 const port = process.env.PORT || 3000;
 console.log(`Server running at http://localhost:${port}`);

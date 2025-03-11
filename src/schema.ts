@@ -9,7 +9,7 @@ export const watchlist = sqliteTable('watchlist', {
   posterPath: text('poster_path'),
   releaseDate: text('release_date'),
   overview: text('overview'),
-  voteAverage: real('vote_average'), // Add this field for the rating
+  voteAverage: real('vote_average'), // Add this field for ratings
   createdAt: integer('created_at', { mode: 'timestamp' })
     .$defaultFn(() => new Date())
 });
