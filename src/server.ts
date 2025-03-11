@@ -296,6 +296,9 @@ app.post('/api/auth/signup', async (c) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: "https://watch-pick.onrender.com"
+      }
     });
     
     if (error) {
