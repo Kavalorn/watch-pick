@@ -1,17 +1,21 @@
 // src/schema.ts
-import { sqliteTable, text, integer, primaryKey, real } from 'drizzle-orm/sqlite-core';
+import { pgTable, serial, integer, text, timestamp, real, uniqueIndex } from 'drizzle-orm/pg-core';
 
-// Watchlist schema
-export const watchlist = sqliteTable('watchlist', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  movieId: integer('movie_id').notNull().unique(),
+// Watchlist schema for PostgreSQL
+export const watchlist = pgTable('watchlist', {
+  id: serial('id').primaryKey(),
+  movieId: integer('movie_id').notNull(),
   title: text('title').notNull(),
   posterPath: text('poster_path'),
   releaseDate: text('release_date'),
   overview: text('overview'),
-  voteAverage: real('vote_average'), // Add this field for ratings
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .$defaultFn(() => new Date())
+  voteAverage: real('vote_average'),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+}, (table) => {
+  return {
+    movieIdIdx: uniqueIndex('movie_id_idx').on(table.movieId),
+  }
 });
 
 // Define types based on the schema

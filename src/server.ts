@@ -2,15 +2,15 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serveStatic } from 'hono/bun';
-import { drizzle } from 'drizzle-orm/bun-sqlite';
-import { Database } from 'bun:sqlite';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import { eq, desc } from 'drizzle-orm';
 import * as schema from './schema';
+import 'dotenv/config';
 
-// Initialize the database
-const sqlite = new Database('movies.db');
-const db = drizzle(sqlite);
-
+// Disable prefetch as it is not supported for "Transaction" pool mode
+export const client = postgres(process.env.SUPABASE_URL!, { prepare: false })
+export const db = drizzle(client, { schema });
 // Initialize Hono app
 const app = new Hono();
 
@@ -27,7 +27,7 @@ app.use(cors({
 app.use('/*', serveStatic({ root: './public' }));
 
 // Environment variables (replace with your actual API key)
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1OTE0OGIzNGFjNjI4MGQ3MmNjOTdiODRmZjk4ODAxYSIsIm5iZiI6MTczNjc5NjQ0MS4yNjQ5OTk5LCJzdWIiOiI2Nzg1NjkxOWRiNGZlMDIyYWQ0ZTYxYWEiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.rPvIJH2N49T1lcvDwzUZOzW3CLwwqFL1GEKEzwmGv0g";
+const TMDB_API_KEY = process.env.TMDB_API_KEY || "your_tmdb_api_key";
 
 // API Routes
 
@@ -115,7 +115,7 @@ app.get('/api/movies/:id/images', async (c) => {
   }
 });
 
-// Get watchlist
+// Add movie to watchlist
 app.post('/api/watchlist', async (c) => {
   try {
     const movie = await c.req.json();
@@ -133,7 +133,7 @@ app.post('/api/watchlist', async (c) => {
         posterPath: movie.poster_path || null,
         releaseDate: movie.release_date || null,
         overview: movie.overview || null,
-        voteAverage: movie.vote_average || null, // Store the rating
+        voteAverage: movie.vote_average || null,
       })
       .onConflictDoUpdate({
         target: schema.watchlist.movieId,
@@ -142,7 +142,7 @@ app.post('/api/watchlist', async (c) => {
           posterPath: movie.poster_path || null,
           releaseDate: movie.release_date || null,
           overview: movie.overview || null,
-          voteAverage: movie.vote_average || null, // Update the rating
+          voteAverage: movie.vote_average || null,
         }
       });
     
@@ -166,7 +166,7 @@ app.get('/api/watchlist', async (c) => {
       poster_path: item.posterPath,
       release_date: item.releaseDate,
       overview: item.overview,
-      vote_average: item.voteAverage, // Include the rating
+      vote_average: item.voteAverage,
       created_at: item.createdAt
     }));
     
@@ -187,11 +187,8 @@ app.delete('/api/watchlist/:id', async (c) => {
     }
     
     // Delete movie from watchlist
-    const result = await db.delete(schema.watchlist)
+    await db.delete(schema.watchlist)
       .where(eq(schema.watchlist.movieId, movieId));
-    
-    // Note: Drizzle doesn't return the number of affected rows by default
-    // We would need to check the result differently or handle this case separately
     
     return c.json({ success: true, message: 'Movie removed from watchlist' });
   } catch (error) {
